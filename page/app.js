@@ -556,13 +556,6 @@ async function boot() {
   on("import").addEventListener("click", () => openImport(on("import-panel").hidden));
   const importLink = on("import-link");
   if (importLink instanceof HTMLAnchorElement) inputEl("import-url").value = importLink.href;
-  on("import-link").addEventListener("click", (event) => {
-    if (!(importLink instanceof HTMLAnchorElement)) return;
-    // a plain click inside the app's webview is treated as in-app navigation;
-    // asking for a new window is the same path Ctrl+click takes
-    event.preventDefault();
-    window.open(importLink.href, "_blank", "noopener");
-  });
   on("import-copy").addEventListener("click", copyImportLink);
   inputEl("import-url").addEventListener("click", () => inputEl("import-url").select());
   on("import-apply").addEventListener("click", applyImport);
