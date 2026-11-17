@@ -1,18 +1,18 @@
 // Prompt Guard — the page half of the plugin.
 // Reads and writes this plugin's options; the middleware half reads the same
-// object on every request that goes to a selected provider.
+// object on every request whose model matches the configured wildcards.
 
 const BUILTIN_RULES = globalThis.PROMPT_GUARD_RULES ?? [];
 const MATCH = globalThis.PROMPT_GUARD_MATCH;
+const DEFAULT_MODELS = ["*gemini*"];
 
-const EMPTY = { off: false, providers: [], rules: [] };
+const EMPTY = { off: false, models: DEFAULT_MODELS.slice(), rules: [] };
 const SAVE_DEBOUNCE = 700;
 const MIN_SET_INTERVAL = 1100;
 
 const api = typeof magpie !== "undefined" ? magpie : null;
 
-const state = { off: false, providers: [], rules: [] };
-let providers = [];
+const state = { off: false, models: DEFAULT_MODELS.slice(), rules: [] };
 let filter = "";
 let saveTimer = null;
 let lastSet = 0;
@@ -49,13 +49,15 @@ function textareaEl(id) {
 }
 
 function normalize(raw) {
-  const out = { off: false, providers: [], rules: [] };
+  const out = { off: false, models: DEFAULT_MODELS.slice(), rules: [] };
   if (!raw || typeof raw !== "object") return out;
 
   out.off = raw.off === true;
 
-  if (Array.isArray(raw.providers)) {
-    out.providers = raw.providers.filter((id) => typeof id === "string" && id !== "");
+  if (Array.isArray(raw.models)) {
+    out.models = raw.models
+      .map((item) => (typeof item === "string" ? item.trim() : ""))
+      .filter((item) => item !== "");
   }
 
   if (Array.isArray(raw.rules)) {
@@ -79,7 +81,7 @@ function hasRuleList(value) {
 
 function replaceState(next) {
   state.off = next.off;
-  state.providers = next.providers.slice();
+  state.models = next.models.slice();
   state.rules = next.rules;
 }
 
@@ -110,7 +112,7 @@ async function flush() {
   try {
     const saved = await api.options.set({
       off: state.off,
-      providers: state.providers,
+      models: state.models,
       rules: state.rules,
     });
     if (saved) replaceState(normalize(saved));
@@ -125,96 +127,87 @@ async function flush() {
   }
 }
 
-// ------------------------------------------------------------------ provider
+// --------------------------------------------------------------------- model
 
-function renderProviderSummary() {
-  const summary = on("provider-summary");
-  const all = state.providers.includes("*");
-  const chosen = state.providers.filter((id) => id !== "*");
-  let text = "未选择";
-  if (all) text = "全部 provider";
-  else if (chosen.length === 1) {
-    const hit = providers.find((item) => item.id === chosen[0]);
-    text = (hit && hit.name) || chosen[0];
-  } else if (chosen.length > 1) text = `${chosen.length} 个 provider`;
+function renderModelSummary() {
+  const summary = on("model-summary");
+  const list = state.models;
+  let text = "未配置";
+  if (list.includes("*")) text = "全部模型 (*)";
+  else if (list.length === 1) text = list[0];
+  else if (list.length > 1) text = `${list.length} 个模型规则`;
   summary.textContent = text;
-  summary.classList.toggle("none", !all && chosen.length === 0);
+  summary.classList.toggle("none", list.length === 0);
+}
+
+function addModelPattern(raw) {
+  const pattern = raw.trim();
+  if (!pattern) return;
+  if (!state.models.some((item) => item.toLowerCase() === pattern.toLowerCase())) {
+    state.models.push(pattern);
+    afterModelChange();
+  }
+  inputEl("pop-input").value = "";
+  on("pop-input").focus();
 }
 
 function renderPopover() {
   const box = on("pop-list");
-  const query = inputEl("pop-search").value.trim().toLowerCase();
   box.textContent = "";
 
-  const all = document.createElement("button");
-  all.type = "button";
-  all.className = "pop-item all";
-  all.setAttribute("role", "checkbox");
-  all.setAttribute("aria-checked", String(state.providers.includes("*")));
-  all.innerHTML = '<span class="box"></span><span class="name">全部 provider</span>';
-  all.addEventListener("click", () => {
-    const at = state.providers.indexOf("*");
-    if (at === -1) state.providers.push("*");
-    else state.providers.splice(at, 1);
-    afterProviderChange();
-  });
-  box.append(all);
-
-  const shown = providers.filter((item) => {
-    if (!query) return true;
-    return item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query);
-  });
-
-  if (!shown.length) {
+  if (!state.models.length) {
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = providers.length ? "没有匹配的 provider" : "magpie 没有列出 provider";
+    empty.textContent = "未配置模型规则，支持 * 和 ? 通配符";
     box.append(empty);
+    return;
   }
 
-  for (const provider of shown) {
-    const checked = state.providers.includes(provider.id);
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className = "pop-item";
-    row.setAttribute("role", "checkbox");
-    row.setAttribute("aria-checked", String(checked));
-    row.innerHTML = '<span class="box"></span><span class="name"></span><span class="id"></span>';
-    row.querySelector(".name").textContent = provider.name || provider.id;
-    row.querySelector(".id").textContent = provider.name && provider.name !== provider.id ? provider.id : "";
-    row.addEventListener("click", () => {
-      const at = state.providers.indexOf(provider.id);
-      if (at === -1) state.providers.push(provider.id);
-      else state.providers.splice(at, 1);
-      afterProviderChange();
+  state.models.forEach((pattern, index) => {
+    const row = document.createElement("div");
+    row.className = "pop-model-item";
+    row.setAttribute("role", "listitem");
+
+    const code = document.createElement("code");
+    code.className = "pop-model-code";
+    code.textContent = pattern;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "pop-model-del";
+    del.setAttribute("aria-label", `删除 ${pattern}`);
+    del.textContent = "×";
+    del.addEventListener("click", () => {
+      state.models.splice(index, 1);
+      afterModelChange();
     });
+
+    row.append(code, del);
     box.append(row);
-  }
+  });
 }
 
-function afterProviderChange() {
+function afterModelChange() {
   renderPopover();
-  renderProviderSummary();
+  renderModelSummary();
   updatePopCount();
   scheduleSave();
 }
 
 function updatePopCount() {
-  const all = state.providers.includes("*");
-  const n = state.providers.filter((id) => id !== "*").length;
-  on("pop-count").textContent = all ? "全部" : n ? `已选 ${n}` : "未选择";
+  const n = state.models.length;
+  on("pop-count").textContent = n ? `${n} 条规则` : "未配置";
 }
 
 function openPopover(open) {
   const pop = on("popover");
-  const btn = on("provider-btn");
+  const btn = on("model-btn");
   pop.hidden = !open;
   btn.setAttribute("aria-expanded", String(open));
   if (open) {
-    inputEl("pop-search").value = "";
     renderPopover();
     updatePopCount();
-    on("pop-search").focus();
+    on("pop-input").focus();
   }
 }
 
@@ -515,22 +508,6 @@ function renderTest() {
 
 // ---------------------------------------------------------------------- boot
 
-function asList(value) {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === "object" && "providers" in value) {
-    return Array.isArray(value.providers) ? value.providers : [];
-  }
-  return [];
-}
-
-function toProvider(item) {
-  if (!item || typeof item !== "object") return null;
-  const id = "id" in item ? item.id : "provider" in item ? item.provider : undefined;
-  if (typeof id !== "string" || id === "") return null;
-  const name = "name" in item && typeof item.name === "string" ? item.name : "";
-  return { id: id, name: name };
-}
-
 async function boot() {
   if (!api) {
     setStatus("未连接 magpie", true);
@@ -565,19 +542,27 @@ async function boot() {
     renderRules();
   });
 
-  on("provider-btn").addEventListener("click", () => {
+  on("model-btn").addEventListener("click", () => {
     openPopover(on("popover").hidden);
   });
-  on("pop-search").addEventListener("input", renderPopover);
+  on("pop-add").addEventListener("click", () => {
+    addModelPattern(inputEl("pop-input").value);
+  });
+  on("pop-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      addModelPattern(inputEl("pop-input").value);
+    }
+  });
   on("pop-clear").addEventListener("click", () => {
-    state.providers = [];
-    afterProviderChange();
+    state.models = [];
+    afterModelChange();
   });
 
   document.addEventListener("click", (event) => {
     if (!(event.target instanceof Node)) return;
     if (!on("popover").hidden) {
-      const wrap = on("provider-btn").parentElement;
+      const wrap = on("model-btn").parentElement;
       if (!wrap || !wrap.contains(event.target)) openPopover(false);
     }
     if (!on("import-panel").hidden) {
@@ -590,7 +575,7 @@ async function boot() {
     if (event.key !== "Escape") return;
     if (!on("popover").hidden) {
       openPopover(false);
-      on("provider-btn").focus();
+      on("model-btn").focus();
       return;
     }
     if (!on("import-panel").hidden) {
@@ -608,12 +593,6 @@ async function boot() {
     }
   });
 
-  try {
-    const items = asList(await api.read("providers:list"));
-    providers = items.map(toProvider).filter(Boolean);
-  } catch (error) {
-    providers = [];
-  }
 
   /** @type {unknown} */
   let saved = EMPTY;
@@ -628,7 +607,7 @@ async function boot() {
 
   replaceState(next);
   power.setAttribute("aria-checked", String(!state.off));
-  renderProviderSummary();
+  renderModelSummary();
   updatePopCount();
   renderRules();
   renderTest();

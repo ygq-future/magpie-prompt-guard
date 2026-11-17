@@ -125,10 +125,31 @@ const APPLY = {
   gemini: applyGemini,
 };
 
-function targets(options, provider) {
-  const list = Array.isArray(options.providers) ? options.providers : [];
-  if (!list.length) return false;
-  return list.indexOf("*") !== -1 || list.indexOf(provider) !== -1;
+const DEFAULT_MODELS = ["*gemini*"];
+
+function wildcardMatch(pattern, value) {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+  return new RegExp("^" + escaped + "$", "i").test(value);
+}
+
+function extractModel(body, ctx) {
+  if (typeof body.model === "string" && body.model.trim()) return body.model.trim();
+  if (ctx && typeof ctx.model === "string" && ctx.model.trim()) return ctx.model.trim();
+  if (ctx && typeof ctx.url === "string") {
+    const match = ctx.url.match(/\/models\/([^:/?]+)/i);
+    if (match && match[1]) return match[1].trim();
+  }
+  return "";
+}
+
+function targets(options, model) {
+  const list = Array.isArray(options.models) ? options.models : DEFAULT_MODELS;
+  if (!model || !list.length) return false;
+  for (let i = 0; i < list.length; i++) {
+    const pattern = typeof list[i] === "string" ? list[i].trim() : "";
+    if (pattern && wildcardMatch(pattern, model)) return true;
+  }
+  return false;
 }
 
 // Generated from phrases.json by scripts/sync-rules.mjs — edit the JSON, not
@@ -244,8 +265,8 @@ export function onProvider(body, ctx) {
   const options = (ctx && ctx.options) || {};
   if (options.off) return;
   if (!isObject(body)) return;
-  const provider = ctx && ctx.provider && ctx.provider.id ? ctx.provider.id : "";
-  if (!targets(options, provider)) return;
+  const model = extractModel(body, ctx);
+  if (!targets(options, model)) return;
 
   const listed = Array.isArray(options.rules) ? options.rules : null;
   const compiled = compile(listed === null ? BUILTIN_RULES : listed);
@@ -258,7 +279,7 @@ export function onProvider(body, ctx) {
   apply(body, compiled, hits);
   if (hits.count > 0) {
     // magpie's log, at most 60 lines a minute: one line per rewritten request.
-    console.log("prompt-guard: " + hits.count + " phrase(s) rewritten for " + provider + " (" + compiled.length + " rules armed)");
+    console.log("prompt-guard: " + hits.count + " phrase(s) rewritten for " + model + " (" + compiled.length + " rules armed)");
   }
   return body;
 }

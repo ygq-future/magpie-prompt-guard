@@ -20,20 +20,21 @@
 
   <div class="toolbar">
     <div class="picker-wrap">
-      <button id="provider-btn" class="picker" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="popover">
+      <button id="model-btn" class="picker" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="popover">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-        <span>Provider</span>
-        <span id="provider-summary" class="picker-value">未选择</span>
+        <span>Model</span>
+        <span id="model-summary" class="picker-value">未配置</span>
         <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
 
       <div id="popover" class="popover" hidden>
-        <div class="pop-head">
-          <input id="pop-search" type="search" placeholder="搜索 provider" aria-label="搜索 provider">
+        <div class="pop-head pop-add">
+          <input id="pop-input" type="text" placeholder="输入模型通配符，如 *gemini*" aria-label="输入模型通配符">
+          <button id="pop-add" class="primary" type="button">添加</button>
         </div>
-        <div id="pop-list" class="pop-list" role="group" aria-label="选择 provider"></div>
+        <div id="pop-list" class="pop-list" role="list" aria-label="已配置的模型规则"></div>
         <div class="pop-foot">
-          <button id="pop-clear" class="link" type="button">清空选择</button>
+          <button id="pop-clear" class="link" type="button">清空</button>
           <span id="pop-count" class="muted"></span>
         </div>
       </div>

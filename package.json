@@ -25,10 +25,9 @@
       "file": "page/index.html",
       "icon": "page/icon.svg"
     },
-    "permissions": ["providers:list"],
     "options": {
       "off": false,
-      "providers": []
+      "models": ["*gemini*"]
     }
   }
 }
