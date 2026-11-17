@@ -47,10 +47,11 @@
       <button id="import" class="ghost" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="import-panel">导入词库</button>
       <div id="import-panel" class="popover import-panel" hidden>
         <div class="import-head">
-          <a id="import-link" href="https://raw.githubusercontent.com/ygq-future/magpie-prompt-guard/main/phrases.json" target="_blank" rel="noreferrer">打开 phrases.json</a>
-          <button id="import-copy" class="link" type="button">复制链接</button>
+          <label for="import-url">词库地址</label>
+          <button id="import-copy" class="link" type="button">复制</button>
         </div>
-        <textarea id="import-text" placeholder="把 phrases.json 的内容粘贴到这里" aria-label="词库内容"></textarea>
+        <input id="import-url" class="import-url" type="text" readonly value="https://raw.githubusercontent.com/ygq-future/magpie-prompt-guard/main/phrases.json" aria-label="词库地址">
+        <textarea id="import-text" placeholder="在浏览器打开上面的地址，复制全文后粘贴到这里" aria-label="词库内容"></textarea>
         <div class="import-foot">
           <span id="import-status" class="muted import-status" role="status"></span>
           <button id="import-apply" class="primary" type="button">应用</button>

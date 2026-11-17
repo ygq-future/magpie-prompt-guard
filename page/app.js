@@ -425,22 +425,24 @@ function applyImport() {
 }
 
 async function copyImportLink() {
-  const link = on("import-link");
-  const url = link instanceof HTMLAnchorElement ? link.href : "";
+  const field = inputEl("import-url");
+  const url = field.value;
+  field.focus();
+  field.select();
   try {
     await navigator.clipboard.writeText(url);
-    setImportStatus("已复制链接");
+    setImportStatus("已复制地址");
+    return;
   } catch (error) {
-    // a webview may refuse the clipboard API; selecting the link still lets Ctrl+C work
-    const range = document.createRange();
-    range.selectNodeContents(link);
-    const selection = window.getSelection();
-    if (selection) {
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-    setImportStatus("已选中链接，按 Ctrl+C 复制");
+    // a webview may refuse the clipboard API; the selected text is the fallback
   }
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch (error) {
+    copied = false;
+  }
+  setImportStatus(copied ? "已复制地址" : "已选中地址，按 Ctrl+C 复制");
 }
 
 // -------------------------------------------------------------------- tester
@@ -553,6 +555,7 @@ async function boot() {
 
   on("import").addEventListener("click", () => openImport(on("import-panel").hidden));
   on("import-copy").addEventListener("click", copyImportLink);
+  inputEl("import-url").addEventListener("click", () => inputEl("import-url").select());
   on("import-apply").addEventListener("click", applyImport);
 
   on("filter").addEventListener("input", (event) => {
