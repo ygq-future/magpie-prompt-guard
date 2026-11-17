@@ -1,0 +1,123 @@
+# Prompt Guard
+
+社区维护的 **Antigravity / Cloud Code 违禁词库**，以及把它自动应用到网关请求上的 **magpie 插件**。两者在同一个仓库里：词库是一份 JSON，插件从它生成规则。
+
+> Google Cloud Code 会对「读起来像第三方 agent 的 system 提示」返回一个**配额形状的 429**（`RESOURCE_EXHAUSTED` + 没有意义的 `retry-after`）。它匹配的是字面指纹，不是语义——同一句话改一个标点就能通过。本仓库收集这些指纹以及不改变含义的改写方式。
+
+| 文件 | 作用 |
+|---|---|
+| [`phrases.json`](phrases.json) | **唯一的真相**：社区维护的指纹与改写 |
+| `prompt-guard.middleware.js` | magpie 中间件，按 provider 改写系统提示 |
+| `page/` | 插件页面：选 provider、编辑规则、试运行、同步词库 |
+| `scripts/sync-rules.mjs` | 从 `phrases.json` 生成上面两处规则列表 |
+
+## 为什么需要它
+
+- 现象：agent 正常发请求，却立刻收到 `429 RESOURCE_EXHAUSTED`，`retry-after` 几十秒到两分钟，换 agent、换模型都一样。
+- 机制：上游检查 **system 提示**（不检查用户消息）。命中时返回配额错误而不是 400，用来掩盖过滤本身。
+- 证据：omp 的系统提示第一行 `You are omp's trusted coding assistant.` 单独发送会被拒；**去掉句号**就通过。Claude Code 的 `<pasted_content>` 那段两句话，拆成两半各自通过，合起来被拒。
+- Antigravity 官方客户端不受影响——它发的是自己的 system 提示，不含这些指纹。
+
+## 词库 `phrases.json`
+
+```json
+{
+  "version": 1,
+  "updated": "2026-11-17",
+  "phrases": [
+    {
+      "find": "上游会拒绝的原文",
+      "replace": "同义但不含指纹的改写",
+      "mode": "text",
+      "note": "为什么是这句、证据是什么"
+    }
+  ]
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| `find` | 必填。按**忽略大小写 + 空白等价**匹配（原文换行、多个空格也能命中）；`mode: "regex"` 时按正则解释 |
+| `replace` | 必填。纯文本，`$1` / `$&` 不会被展开 |
+| `mode` | `text`（默认）或 `regex` |
+| `note` | 可选。写清楚是哪句话、怎么验证的 |
+
+**排序有意义**：长的写在前面，否则短规则会先吃掉长规则的文本。`scripts/sync-rules.mjs` 会拒绝重复的 `find` 和空的 `replace`。
+
+### 贡献规则
+
+1. 在 `phrases.json` 里加一条，`note` 里写最小复现：模型、system 片段、以及"原文 429 / 改写后 200"的对照。
+2. 跑 `bun scripts/sync-rules.mjs && bun test`。
+3. 提 PR。
+
+两条底线：
+
+- **改写，不要删除**。模型仍然需要读到那句话的含义，只是不要留下指纹。
+- **不要泛化**。`find` 写成 `You are .* assistant` 这类宽泛匹配会误伤正常提示，PR 不会合并。
+
+## 安装插件
+
+```bash
+magpie plugin add github:ygq-future/magpie-prompt-guard
+```
+
+装好后打开 **Plugins › Prompt Guard**：
+
+1. 点 `Provider` 勾选要生效的 provider（例如 `CLIProxyAPI`）；不选则原样放行。
+2. 规则默认来自本仓库发布时的 `phrases.json` 快照。
+3. 想拿最新词库，点工具栏的 **同步词库**——页面会从本仓库 `main` 分支拉取 `phrases.json` 并写进插件配置。
+
+只改**系统提示**：用户消息、助手消息、工具结果永远原样发送。
+
+## "实时拉取"的边界
+
+magpie 的网关中间件（moejs）**没有网络、没有文件、没有定时器**，所以中间件本身不可能去拉取词库。实际的更新路径有两条：
+
+| 方式 | 时机 | 怎么触发 |
+|---|---|---|
+| 页面同步 | 你点按钮时 | **同步词库** → 拉 `main` 的 `phrases.json` → 存入插件 options |
+| 随插件更新 | 仓库发新版后 | `magpie plugin update` |
+
+也就是说：词库更新到仓库后，别的机器不会自动生效，需要点一次同步或更新插件——这是 magpie 插件模型的限制，不是本插件偷懒。
+
+## 发布到 magpie，让别人能搜到
+
+现在有三条路，按"能不能立刻用"排序：
+
+1. **GitHub 直装（已经可用）**
+   ```bash
+   magpie plugin add github:ygq-future/magpie-prompt-guard
+   ```
+   别人不需要任何发布流程，仓库就是插件。
+
+2. **npm 发布（让别人用名字装）**
+   ```bash
+   npm login                      # 需要 npm 账号
+   npm publish --access public    # 包名即安装名
+   magpie plugin add magpie-prompt-guard
+   ```
+   magpie 的 `plugin add <name>` 先去 npm registry 找同名包；`magpie plugin registry` 显示当前使用的 registry（本机是 `https://registry.npmjs.org`）。
+
+3. **进 magpie 的内置名单（搜索框里直接出现）**
+   `magpie plugin add workbuddy` 这种"按名字装"的短名来自 magpie 内置的社区插件名单，**目前没有自助提交入口**，需要去 magpie 的仓库/社区提 issue 把包名加进去。在此之前，路径 1 和 2 足够让人装上。
+
+## 开发
+
+```bash
+bun scripts/sync-rules.mjs        # phrases.json → page/rules.js + middleware 的 BUILTIN_RULES
+bun scripts/sync-rules.mjs --check # CI 用：不同步就退出 1
+bun test                          # 25 个测试：匹配、协议、内置列表一致性
+bunx tsc -p jsconfig.json         # 页面脚本的类型检查
+```
+
+改了 `phrases.json` 一定要跑 `sync-rules.mjs`，否则测试会失败（它比对生成结果）。
+
+## 风险
+
+- 这类改写**可能违反上游服务条款**，有封号风险，只用在能承受损失的账号上。
+- 指纹是**逐字节**匹配的，上游一改提示词、或新增指纹，规则就需要重新定位。这个仓库的价值就在于把这件事分摊给所有人。
+- 规则只作用于你勾选的 provider，其他 provider 的请求不会被改动。
+
+## 许可
+
+MIT

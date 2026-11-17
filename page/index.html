@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt Guard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="ident">
+      <h1>Prompt Guard</h1>
+      <span id="status" class="status" role="status" aria-live="polite"></span>
+    </div>
+    <button id="power" class="switch" type="button" role="switch" aria-checked="false" aria-label="启用">
+      <span class="track"><span class="knob"></span></span>
+      <span class="switch-label">启用</span>
+    </button>
+  </header>
+
+  <div class="toolbar">
+    <div class="picker-wrap">
+      <button id="provider-btn" class="picker" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="popover">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>Provider</span>
+        <span id="provider-summary" class="picker-value">未选择</span>
+        <svg class="chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <div id="popover" class="popover" hidden>
+        <div class="pop-head">
+          <input id="pop-search" type="search" placeholder="搜索 provider" aria-label="搜索 provider">
+        </div>
+        <div id="pop-list" class="pop-list" role="group" aria-label="选择 provider"></div>
+        <div class="pop-foot">
+          <button id="pop-clear" class="link" type="button">清空选择</button>
+          <span id="pop-count" class="muted"></span>
+        </div>
+      </div>
+    </div>
+
+    <span id="count" class="muted"></span>
+
+    <div class="grow"></div>
+
+    <button id="sync" class="ghost" type="button" title="从 GitHub 拉取最新的 phrases.json">同步词库</button>
+    <span id="sync-status" class="muted sync-status" role="status"></span>
+
+    <input id="filter" class="filter" type="search" placeholder="筛选规则" aria-label="筛选规则">
+    <button id="add" class="primary" type="button">新增规则</button>
+  </div>
+
+  <div class="shell">
+    <main id="rules" class="rules" aria-label="规则"></main>
+
+    <aside class="tester" aria-label="试运行">
+      <div class="tester-head">
+        <h2>试运行</h2>
+        <span class="muted">只在本页计算，不发请求</span>
+      </div>
+      <textarea id="test-in" placeholder="粘贴一段系统提示，看看当前规则会把它改成什么…" aria-label="待测试的提示"></textarea>
+      <div id="test-out" class="test-out" aria-live="polite"></div>
+    </aside>
+  </div>
+
+  <!-- magpie inlines these in place; they must come after the markup they mount on. -->
+  <script src="_magpie/bridge.js"></script>
+  <script src="rules.js"></script>
+  <script src="match.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "name": "magpie-prompt-guard",
+  "version": "0.1.0",
+  "description": "Community-maintained Antigravity / Cloud Code 429 blocklist, plus the magpie plugin that rewrites those system-prompt fingerprints at the gateway.",
+  "type": "module",
+  "files": ["prompt-guard.middleware.js", "page", "phrases.json", "scripts", "README.md"],
+  "keywords": ["magpie", "magpie-plugin", "magpie-middleware", "magpie-page", "prompt", "antigravity"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ygq-future/magpie-prompt-guard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ygq-future/magpie-prompt-guard/issues"
+  },
+  "homepage": "https://github.com/ygq-future/magpie-prompt-guard#readme",
+  "engines": {
+    "magpie": ">=0.1.1283"
+  },
+  "magpie": {
+    "middleware": "./prompt-guard.middleware.js",
+    "page": {
+      "title": "Prompt Guard",
+      "titles": { "zh": "提示词守卫" },
+      "file": "page/index.html",
+      "icon": "page/icon.svg"
+    },
+    "permissions": ["providers:list"],
+    "options": {
+      "off": false,
+      "providers": []
+    }
+  }
+}
