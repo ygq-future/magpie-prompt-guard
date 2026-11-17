@@ -43,8 +43,9 @@
 
     <div class="grow"></div>
 
-    <button id="sync" class="ghost" type="button" title="从 GitHub 拉取最新的 phrases.json">同步词库</button>
-    <span id="sync-status" class="muted sync-status" role="status"></span>
+    <button id="import" class="ghost" type="button" title="选择 phrases.json 导入规则">导入词库</button>
+    <input id="import-file" type="file" accept="application/json,.json" hidden>
+    <span id="import-status" class="muted import-status" role="status"></span>
 
     <input id="filter" class="filter" type="search" placeholder="筛选规则" aria-label="筛选规则">
     <button id="add" class="primary" type="button">新增规则</button>

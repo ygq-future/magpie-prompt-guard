@@ -461,7 +461,7 @@ textarea::placeholder { opacity: 0.45; }
 .ghost:active { transform: translateY(0.5px); }
 .ghost:disabled { opacity: 0.45; cursor: default; transform: none; }
 
-.sync-status {
+.import-status {
   max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -469,7 +469,7 @@ textarea::placeholder { opacity: 0.45; }
   font-size: 11px;
 }
 
-.sync-status[data-tone="error"] { color: var(--danger); }
+.import-status[data-tone="error"] { color: var(--danger); }
 
 :focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
 

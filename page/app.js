@@ -48,16 +48,6 @@ function textareaEl(id) {
   return node;
 }
 
-/**
- * @param {string} id
- * @returns {HTMLButtonElement}
- */
-function buttonEl(id) {
-  const node = on(id);
-  if (!(node instanceof HTMLButtonElement)) throw new Error(`not a button: ${id}`);
-  return node;
-}
-
 function normalize(raw) {
   const out = { off: false, providers: [], rules: [] };
   if (!raw || typeof raw !== "object") return out;
@@ -380,45 +370,44 @@ function addRule() {
 
 // -------------------------------------------------------------------- phrases
 
-// The community list this plugin ships from. The page pulls it on demand; the
-// middleware never touches the network, so a fetch that fails here leaves the
-// current rules exactly as they are.
-const PHRASES_URL = "https://raw.githubusercontent.com/ygq-future/magpie-prompt-guard/main/phrases.json";
+// magpie serves plugin pages under `connect-src 'self'`: the page has no
+// network at all, so the community list arrives as a file the user picks —
+// downloaded from the repository, or written by hand. Nothing here touches
+// fetch, and a malformed file leaves the current rules untouched.
+function applyPhrases(data) {
+  const phrases = Array.isArray(data && data.phrases) ? data.phrases : null;
+  if (!phrases) throw new Error("不是 phrases.json 的结构");
+  const rules = phrases
+    .map((phrase) => ({
+      on: true,
+      find: typeof phrase.find === "string" ? phrase.find : "",
+      replace: typeof phrase.replace === "string" ? phrase.replace : "",
+      mode: phrase.mode === "regex" ? "regex" : "text",
+    }))
+    .filter((rule) => rule.find && rule.replace);
+  if (!rules.length) throw new Error("词库里没有可用规则");
+  state.rules = rules;
+  if (filter) {
+    filter = "";
+    inputEl("filter").value = "";
+  }
+  renderRules();
+  scheduleSave();
+  scheduleTest();
+  return { count: rules.length, updated: typeof data.updated === "string" ? data.updated : "" };
+}
 
-async function syncPhrases() {
-  const button = buttonEl("sync");
-  const status = on("sync-status");
-  button.disabled = true;
+async function importPhrases(file) {
+  const status = on("import-status");
   status.dataset.tone = "";
-  status.textContent = "同步中…";
+  status.textContent = "读取中…";
   try {
-    const response = await fetch(PHRASES_URL + "?t=" + Date.now(), { cache: "no-store" });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    const data = await response.json();
-    const phrases = Array.isArray(data.phrases) ? data.phrases : [];
-    const rules = phrases
-      .map((phrase) => ({
-        on: true,
-        find: typeof phrase.find === "string" ? phrase.find : "",
-        replace: typeof phrase.replace === "string" ? phrase.replace : "",
-        mode: phrase.mode === "regex" ? "regex" : "text",
-      }))
-      .filter((rule) => rule.find && rule.replace);
-    if (!rules.length) throw new Error("词库里没有可用规则");
-    state.rules = rules;
-    if (filter) {
-      filter = "";
-      inputEl("filter").value = "";
-    }
-    renderRules();
-    scheduleSave();
-    scheduleTest();
-    status.textContent = `已同步 ${rules.length} 条${data.updated ? " · " + data.updated : ""}`;
+    const data = JSON.parse(await file.text());
+    const done = applyPhrases(data);
+    status.textContent = `已导入 ${done.count} 条${done.updated ? " · " + done.updated : ""}`;
   } catch (error) {
     status.dataset.tone = "error";
-    status.textContent = "同步失败：" + (error && error.message ? error.message : String(error));
-  } finally {
-    button.disabled = false;
+    status.textContent = "导入失败：" + (error && error.message ? error.message : String(error));
   }
 }
 
@@ -529,7 +518,15 @@ async function boot() {
   });
 
   on("add").addEventListener("click", addRule);
-  on("sync").addEventListener("click", syncPhrases);
+
+  on("import").addEventListener("click", () => inputEl("import-file").click());
+  inputEl("import-file").addEventListener("change", async () => {
+    const input = inputEl("import-file");
+    const file = input.files && input.files[0];
+    if (!file) return;
+    await importPhrases(file);
+    input.value = "";
+  });
 
   on("filter").addEventListener("input", (event) => {
     filter = inputEl("filter").value.trim().toLowerCase();

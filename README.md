@@ -67,18 +67,25 @@ magpie plugin add github:ygq-future/magpie-prompt-guard
 
 1. 点 `Provider` 勾选要生效的 provider（例如 `CLIProxyAPI`）；不选则原样放行。
 2. 规则默认来自本仓库发布时的 `phrases.json` 快照。
-3. 想拿最新词库，点工具栏的 **同步词库**——页面会从本仓库 `main` 分支拉取 `phrases.json` 并写进插件配置。
+3. 想换成别的词库版本，点工具栏的 **导入词库**，选择从本仓库下载的 `phrases.json`。
 
 只改**系统提示**：用户消息、助手消息、工具结果永远原样发送。
 
-## "实时拉取"的边界
+## 词库怎么更新
 
-magpie 的网关中间件（moejs）**没有网络、没有文件、没有定时器**，所以中间件本身不可能去拉取词库。实际的更新路径有两条：
+magpie 给插件页面的 CSP 是
 
-| 方式 | 时机 | 怎么触发 |
+```
+default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';
+connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'
+```
+
+`connect-src 'self'` 意味着**页面没有任何联网能力**——它既不直连 GitHub，也不走 magpie 的全局代理；网关中间件（moejs）同样没有网络、文件和定时器。所以不存在"打开页面就自动拉取"这种机制，更新走两条路：
+
+| 方式 | 怎么触发 | 生效范围 |
 |---|---|---|
-| 页面同步 | 点击 **同步词库** 时 | 拉 `main` 的 `phrases.json` → 存入插件 options |
-| 随插件更新 | 仓库发新版后 | `magpie plugin update` |
+| 导入文件 | 页面 **导入词库** → 选择 `phrases.json` | 只影响这台机器的插件配置 |
+| 插件更新 | `magpie plugin update` | 换成仓库最新快照（随发版） |
 
 ## 开发
 
