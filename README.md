@@ -2,6 +2,8 @@
 
 社区维护的 **Antigravity / Cloud Code 违禁词库**，以及把它自动应用到网关请求上的 **magpie 插件**。两者在同一个仓库里：词库是一份 JSON，插件从它生成规则。
 
+English: Google Cloud Code answers a system prompt that reads like a third-party agent with a quota-shaped 429. This repository keeps the fingerprints, the rewordings that pass, and a magpie plugin that applies them at the gateway.
+
 > Google Cloud Code 会对「读起来像第三方 agent 的 system 提示」返回一个**配额形状的 429**（`RESOURCE_EXHAUSTED` + 没有意义的 `retry-after`）。它匹配的是字面指纹，不是语义——同一句话改一个标点就能通过。本仓库收集这些指纹以及不改变含义的改写方式。
 
 | 文件 | 作用 |
@@ -75,31 +77,8 @@ magpie 的网关中间件（moejs）**没有网络、没有文件、没有定时
 
 | 方式 | 时机 | 怎么触发 |
 |---|---|---|
-| 页面同步 | 你点按钮时 | **同步词库** → 拉 `main` 的 `phrases.json` → 存入插件 options |
+| 页面同步 | 点击 **同步词库** 时 | 拉 `main` 的 `phrases.json` → 存入插件 options |
 | 随插件更新 | 仓库发新版后 | `magpie plugin update` |
-
-也就是说：词库更新到仓库后，别的机器不会自动生效，需要点一次同步或更新插件——这是 magpie 插件模型的限制，不是本插件偷懒。
-
-## 发布到 magpie，让别人能搜到
-
-现在有三条路，按"能不能立刻用"排序：
-
-1. **GitHub 直装（已经可用）**
-   ```bash
-   magpie plugin add github:ygq-future/magpie-prompt-guard
-   ```
-   别人不需要任何发布流程，仓库就是插件。
-
-2. **npm 发布（让别人用名字装）**
-   ```bash
-   npm login                      # 需要 npm 账号
-   npm publish --access public    # 包名即安装名
-   magpie plugin add magpie-prompt-guard
-   ```
-   magpie 的 `plugin add <name>` 先去 npm registry 找同名包；`magpie plugin registry` 显示当前使用的 registry（本机是 `https://registry.npmjs.org`）。
-
-3. **进 magpie 的内置名单（搜索框里直接出现）**
-   `magpie plugin add workbuddy` 这种"按名字装"的短名来自 magpie 内置的社区插件名单，**目前没有自助提交入口**，需要去 magpie 的仓库/社区提 issue 把包名加进去。在此之前，路径 1 和 2 足够让人装上。
 
 ## 开发
 
