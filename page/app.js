@@ -397,17 +397,49 @@ function applyPhrases(data) {
   return { count: rules.length, updated: typeof data.updated === "string" ? data.updated : "" };
 }
 
-async function importPhrases(file) {
+function setImportStatus(text, tone) {
   const status = on("import-status");
-  status.dataset.tone = "";
-  status.textContent = "读取中…";
+  status.dataset.tone = tone || "";
+  status.textContent = text;
+}
+
+function openImport(open) {
+  const panel = on("import-panel");
+  on("import").setAttribute("aria-expanded", String(open));
+  panel.hidden = !open;
+  if (open) textareaEl("import-text").focus();
+}
+
+function applyImport() {
+  const text = textareaEl("import-text").value.trim();
+  if (!text) {
+    setImportStatus("先粘贴 phrases.json 的内容", "error");
+    return;
+  }
   try {
-    const data = JSON.parse(await file.text());
-    const done = applyPhrases(data);
-    status.textContent = `已导入 ${done.count} 条${done.updated ? " · " + done.updated : ""}`;
+    const done = applyPhrases(JSON.parse(text));
+    setImportStatus(`已导入 ${done.count} 条${done.updated ? " · " + done.updated : ""}`);
   } catch (error) {
-    status.dataset.tone = "error";
-    status.textContent = "导入失败：" + (error && error.message ? error.message : String(error));
+    setImportStatus("导入失败：" + (error && error.message ? error.message : String(error)), "error");
+  }
+}
+
+async function copyImportLink() {
+  const link = on("import-link");
+  const url = link instanceof HTMLAnchorElement ? link.href : "";
+  try {
+    await navigator.clipboard.writeText(url);
+    setImportStatus("已复制链接");
+  } catch (error) {
+    // a webview may refuse the clipboard API; selecting the link still lets Ctrl+C work
+    const range = document.createRange();
+    range.selectNodeContents(link);
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    setImportStatus("已选中链接，按 Ctrl+C 复制");
   }
 }
 
@@ -519,14 +551,9 @@ async function boot() {
 
   on("add").addEventListener("click", addRule);
 
-  on("import").addEventListener("click", () => inputEl("import-file").click());
-  inputEl("import-file").addEventListener("change", async () => {
-    const input = inputEl("import-file");
-    const file = input.files && input.files[0];
-    if (!file) return;
-    await importPhrases(file);
-    input.value = "";
-  });
+  on("import").addEventListener("click", () => openImport(on("import-panel").hidden));
+  on("import-copy").addEventListener("click", copyImportLink);
+  on("import-apply").addEventListener("click", applyImport);
 
   on("filter").addEventListener("input", (event) => {
     filter = inputEl("filter").value.trim().toLowerCase();
@@ -543,15 +570,27 @@ async function boot() {
   });
 
   document.addEventListener("click", (event) => {
-    if (on("popover").hidden) return;
-    const wrap = on("provider-btn").parentElement;
-    if (wrap && event.target instanceof Node && !wrap.contains(event.target)) openPopover(false);
+    if (!(event.target instanceof Node)) return;
+    if (!on("popover").hidden) {
+      const wrap = on("provider-btn").parentElement;
+      if (!wrap || !wrap.contains(event.target)) openPopover(false);
+    }
+    if (!on("import-panel").hidden) {
+      const wrap = on("import").parentElement;
+      if (!wrap || !wrap.contains(event.target)) openImport(false);
+    }
   });
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !on("popover").hidden) {
+    if (event.key !== "Escape") return;
+    if (!on("popover").hidden) {
       openPopover(false);
       on("provider-btn").focus();
+      return;
+    }
+    if (!on("import-panel").hidden) {
+      openImport(false);
+      on("import").focus();
     }
   });
 

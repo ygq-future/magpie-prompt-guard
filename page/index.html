@@ -43,9 +43,20 @@
 
     <div class="grow"></div>
 
-    <button id="import" class="ghost" type="button" title="选择 phrases.json 导入规则">导入词库</button>
-    <input id="import-file" type="file" accept="application/json,.json" hidden>
-    <span id="import-status" class="muted import-status" role="status"></span>
+    <div class="picker-wrap">
+      <button id="import" class="ghost" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="import-panel">导入词库</button>
+      <div id="import-panel" class="popover import-panel" hidden>
+        <div class="import-head">
+          <a id="import-link" href="https://raw.githubusercontent.com/ygq-future/magpie-prompt-guard/main/phrases.json" target="_blank" rel="noreferrer">打开 phrases.json</a>
+          <button id="import-copy" class="link" type="button">复制链接</button>
+        </div>
+        <textarea id="import-text" placeholder="把 phrases.json 的内容粘贴到这里" aria-label="词库内容"></textarea>
+        <div class="import-foot">
+          <span id="import-status" class="muted import-status" role="status"></span>
+          <button id="import-apply" class="primary" type="button">应用</button>
+        </div>
+      </div>
+    </div>
 
     <input id="filter" class="filter" type="search" placeholder="筛选规则" aria-label="筛选规则">
     <button id="add" class="primary" type="button">新增规则</button>

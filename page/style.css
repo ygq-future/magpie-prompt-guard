@@ -471,6 +471,48 @@ textarea::placeholder { opacity: 0.45; }
 
 .import-status[data-tone="error"] { color: var(--danger); }
 
+.import-panel {
+  width: 392px;
+  left: auto;
+  right: 0;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.import-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.import-head a { color: var(--accent); text-decoration: none; }
+.import-head a:hover { text-decoration: underline; }
+
+.import-panel textarea {
+  width: 100%;
+  height: 140px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: 11px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: vertical;
+}
+
+.import-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.import-foot .import-status { flex: 1; min-width: 0; }
+
 :focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
 
 /* ------------------------------------------------------------- responsive */

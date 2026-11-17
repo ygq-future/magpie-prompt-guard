@@ -67,7 +67,7 @@ magpie plugin add github:ygq-future/magpie-prompt-guard
 
 1. 点 `Provider` 勾选要生效的 provider（例如 `CLIProxyAPI`）；不选则原样放行。
 2. 规则默认来自本仓库发布时的 `phrases.json` 快照。
-3. 想换成别的词库版本，点工具栏的 **导入词库**，选择从本仓库下载的 `phrases.json`。
+3. 想换成别的词库版本，点工具栏的 **导入词库**：面板里点 **打开 phrases.json**（或 **复制链接** 自己打开），把全文复制后粘贴进文本框，点 **应用**。
 
 只改**系统提示**：用户消息、助手消息、工具结果永远原样发送。
 
@@ -84,7 +84,7 @@ connect-src 'self'; img-src data:; base-uri 'none'; form-action 'none'
 
 | 方式 | 怎么触发 | 生效范围 |
 |---|---|---|
-| 导入文件 | 页面 **导入词库** → 选择 `phrases.json` | 只影响这台机器的插件配置 |
+| 粘贴导入 | 页面 **导入词库** → 打开 `phrases.json` → 复制全文 → 粘贴 → 应用 | 只影响这台机器的插件配置 |
 | 插件更新 | `magpie plugin update` | 换成仓库最新快照（随发版） |
 
 ## 开发
