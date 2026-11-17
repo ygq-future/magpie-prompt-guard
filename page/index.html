@@ -48,9 +48,12 @@
       <div id="import-panel" class="popover import-panel" hidden>
         <div class="import-head">
           <label for="import-url">词库地址</label>
-          <button id="import-copy" class="link" type="button">复制</button>
+          <span class="import-actions">
+            <a id="import-link" href="https://raw.githubusercontent.com/ygq-future/magpie-prompt-guard/main/phrases.json" target="_blank" rel="noreferrer">打开</a>
+            <button id="import-copy" class="link" type="button">复制</button>
+          </span>
         </div>
-        <input id="import-url" class="import-url" type="text" readonly value="https://raw.githubusercontent.com/ygq-future/magpie-prompt-guard/main/phrases.json" aria-label="词库地址">
+        <input id="import-url" class="import-url" type="text" readonly aria-label="词库地址">
         <textarea id="import-text" placeholder="在浏览器打开上面的地址，复制全文后粘贴到这里" aria-label="词库内容"></textarea>
         <div class="import-foot">
           <span id="import-status" class="muted import-status" role="status"></span>

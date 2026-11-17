@@ -490,6 +490,15 @@ textarea::placeholder { opacity: 0.45; }
   font-size: 12px;
 }
 
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.import-actions a { color: var(--accent); text-decoration: none; }
+.import-actions a:hover { text-decoration: underline; }
+
 .import-url {
   width: 100%;
   height: 26px;
