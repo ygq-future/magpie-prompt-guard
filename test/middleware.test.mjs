@@ -6,42 +6,54 @@ import "../page/match.js";
 const PAGE_RULES = globalThis.PROMPT_GUARD_RULES;
 const MATCH = globalThis.PROMPT_GUARD_MATCH;
 
-const PROVIDER = { id: "cliproxyapi", name: "CLIProxyAPI" };
-
-function run(body, { protocol = "chat", provider = PROVIDER, options = {} } = {}) {
-  return onProvider(body, { protocol: protocol, provider: provider, options: options });
+function run(body, { protocol = "chat", model = "gemini-2.5-flash", url = "", options = {} } = {}) {
+  const ctx = { protocol: protocol, options: options };
+  if (url) ctx.url = url;
+  if (model && body && !("model" in body)) body.model = model;
+  return onProvider(body, ctx);
 }
 
 const rule = (find, replace, extra = {}) => ({ on: true, find: find, replace: replace, mode: "text", ...extra });
-const options = (rules, extra = {}) => ({ off: false, providers: [PROVIDER.id], rules: rules, ...extra });
+const options = (rules, extra = {}) => ({ off: false, models: ["*gemini*"], rules: rules, ...extra });
 
-describe("provider selection", () => {
-  test("leaves the body alone when no provider is selected", () => {
-    const body = { messages: [{ role: "system", content: "You are Claude Code" }] };
-    run(body, { options: options([rule("You are Claude Code", "You are a coding assistant")], { providers: [] }) });
+describe("model selection", () => {
+  test("leaves the body alone when models list is empty", () => {
+    const body = { model: "gemini-2.5-flash", messages: [{ role: "system", content: "You are Claude Code" }] };
+    run(body, { options: options([rule("You are Claude Code", "You are a coding assistant")], { models: [] }) });
     expect(body.messages[0].content).toBe("You are Claude Code");
   });
 
-  test("leaves another provider's body alone", () => {
-    const body = { messages: [{ role: "system", content: "You are Claude Code" }] };
-    run(body, {
-      provider: { id: "deepseek" },
-      options: options([rule("You are Claude Code", "You are a coding assistant")]),
-    });
-    expect(body.messages[0].content).toBe("You are Claude Code");
-  });
-
-  test('"*" applies to every provider', () => {
-    const body = { messages: [{ role: "system", content: "You are Claude Code" }] };
-    run(body, {
-      provider: { id: "anything" },
-      options: options([rule("You are Claude Code", "You are a coding assistant")], { providers: ["*"] }),
-    });
+  test("uses default *gemini* when options.models is omitted", () => {
+    const body = { model: "google/gemini-3.5-flash-lite", messages: [{ role: "system", content: "You are Claude Code" }] };
+    run(body, { options: { off: false, rules: [rule("You are Claude Code", "You are a coding assistant")] } });
     expect(body.messages[0].content).toBe("You are a coding assistant");
   });
 
+  test("leaves non-matching model body alone", () => {
+    const body = { model: "deepseek-chat", messages: [{ role: "system", content: "You are Claude Code" }] };
+    run(body, { options: options([rule("You are Claude Code", "You are a coding assistant")]) });
+    expect(body.messages[0].content).toBe("You are Claude Code");
+  });
+
+  test("supports wildcards case-insensitively", () => {
+    const body = { model: "DeepSeek-R1-0528", messages: [{ role: "system", content: "You are Claude Code" }] };
+    run(body, { options: options([rule("You are Claude Code", "You are a coding assistant")], { models: ["deepseek-*"] }) });
+    expect(body.messages[0].content).toBe("You are a coding assistant");
+  });
+
+  test("extracts model from gemini url when body.model is absent", () => {
+    const body = { systemInstruction: { parts: [{ text: "You are Claude Code" }] }, contents: [] };
+    run(body, {
+      protocol: "gemini",
+      model: "",
+      url: "/v1beta/models/gemini-2.5-pro:generateContent",
+      options: options([rule("You are Claude Code", "You are a coding assistant")]),
+    });
+    expect(body.systemInstruction.parts[0].text).toBe("You are a coding assistant");
+  });
+
   test("does nothing while the plugin is off", () => {
-    const body = { messages: [{ role: "system", content: "You are Claude Code" }] };
+    const body = { model: "gemini-2.5-flash", messages: [{ role: "system", content: "You are Claude Code" }] };
     run(body, { options: options([rule("You are Claude Code", "You are a coding assistant")], { off: true }) });
     expect(body.messages[0].content).toBe("You are Claude Code");
   });
@@ -162,13 +174,13 @@ describe("built-in defaults", () => {
     const body = {
       messages: [{ role: "system", content: "You are Claude Code, Anthropic's official CLI for Claude." }],
     };
-    run(body, { options: { providers: [PROVIDER.id] } });
+    run(body, { options: { models: ["*gemini*"] } });
     expect(body.messages[0].content).toBe("You are a coding assistant.");
   });
 
   test("an empty list turns the built-ins off", () => {
     const body = { messages: [{ role: "system", content: "You are Claude Code." }] };
-    run(body, { options: { providers: [PROVIDER.id], rules: [] } });
+    run(body, { options: { models: ["*gemini*"], rules: [] } });
     expect(body.messages[0].content).toBe("You are Claude Code.");
   });
 
@@ -178,7 +190,7 @@ describe("built-in defaults", () => {
         { role: "system", content: "Read xd://<tool> for full docs + JSON schema before first use." },
       ],
     };
-    run(body, { options: { providers: [PROVIDER.id] } });
+    run(body, { options: { models: ["*gemini*"] } });
     expect(body.messages[0].content).toBe(
       "Before first use, read xd://<tool> for full docs and the JSON schema."
     );
@@ -214,7 +226,7 @@ describe("page and middleware agree", () => {
 
     for (const sample of samples) {
       const body = { system: [{ type: "text", text: sample }], messages: [] };
-      run(body, { protocol: "anthropic", options: { providers: [PROVIDER.id], rules: BUILTIN_RULES } });
+      run(body, { protocol: "anthropic", options: { models: ["*gemini*"], rules: BUILTIN_RULES } });
       const preview = MATCH.testText(sample, MATCH.compile(BUILTIN_RULES));
       expect(body.system[0].text).toBe(preview.out);
     }
