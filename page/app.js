@@ -5,6 +5,14 @@
 const BUILTIN_RULES = globalThis.PROMPT_GUARD_RULES ?? [];
 const MATCH = globalThis.PROMPT_GUARD_MATCH;
 const DEFAULT_MODELS = ["*gemini*"];
+const TROUBLESHOOT_PROMPT = `我的请求通过 Antigravity 上游触发了通用 429 (\`RESOURCE_EXHAUSTED: Resource has been exhausted (e.g. check quota).\` 且无 details)，这通常是因为系统提示词中的某个关键词/短语命中了上游风控。
+
+请你使用**二分法（Binary Search）**帮我定位具体是系统提示词中的哪一个关键词触发了 429：
+1. 构造最小复现：尽量使用快速的 flash-lite 小模型（如 \`gemini-3.5-flash-lite\`）进行验证；保留触发 429 的原始系统提示词（将 \`max_tokens\` 设为 \`16\` 等最小值，用户消息设为简单内容如 \`hi\`），确认稳定返回该通用 429。
+2. 刷新 429 冷却状态（关键）：**每次遇到 429 后**，都必须先发送一次小的、干净的、不带任何系统提示词的简短提问（如 \`hi\`）来刷新冷却状态，确认返回 **200** 后再进行下一轮 429 排查；如果干净请求同样返回 429，说明前面尝试过多已影响干净请求，需**停下来冷却 2 分钟**，再继续用干净请求验证，直到回复 200 才能继续尝试碰撞 429。
+3. 二分系统提示词：将 \`system\` / \`instructions\` / \`systemInstruction\` 文本对半拆分，分别测试保留前半段和保留后半段，哪一半继续触发 429 就继续对该半对半拆分测试。
+4. 缩窄至最短短语：逐层从段落 -> 句子 -> 词组继续二分，直到找出删除其中任意关键单词就不再触发 429 的**最短连续触发短语**。
+5. 输出结果：告诉我定位到的「触发原文」以及建议的「无害替换文本」，我将直接添加到 Prompt Guard 规则中（仅作用于系统提示词）。`;
 
 const EMPTY = { off: false, models: DEFAULT_MODELS.slice(), rules: [] };
 const SAVE_DEBOUNCE = 700;
@@ -416,6 +424,32 @@ function applyImport() {
     setImportStatus("导入失败：" + (error && error.message ? error.message : String(error)), "error");
   }
 }
+function openTroubleshoot(open) {
+  const panel = on("troubleshoot-panel");
+  const btn = on("troubleshoot");
+  panel.hidden = !open;
+  btn.setAttribute("aria-expanded", String(open));
+  if (open) {
+    on("troubleshoot-status").textContent = "";
+    const area = textareaEl("troubleshoot-text");
+    area.focus();
+    area.select();
+  }
+}
+
+async function copyTroubleshootPrompt() {
+  const area = textareaEl("troubleshoot-text");
+  const status = on("troubleshoot-status");
+  try {
+    await navigator.clipboard.writeText(area.value);
+    status.textContent = "已复制";
+  } catch (error) {
+    area.focus();
+    area.select();
+    status.textContent = "请按 Ctrl+C 复制";
+  }
+}
+
 
 async function copyImportLink() {
   const field = inputEl("import-url");
@@ -530,6 +564,9 @@ async function boot() {
 
   on("add").addEventListener("click", addRule);
 
+  textareaEl("troubleshoot-text").value = TROUBLESHOOT_PROMPT;
+  on("troubleshoot").addEventListener("click", () => openTroubleshoot(on("troubleshoot-panel").hidden));
+  on("troubleshoot-copy").addEventListener("click", copyTroubleshootPrompt);
   on("import").addEventListener("click", () => openImport(on("import-panel").hidden));
   const importLink = on("import-link");
   if (importLink instanceof HTMLAnchorElement) inputEl("import-url").value = importLink.href;
@@ -569,6 +606,10 @@ async function boot() {
       const wrap = on("import").parentElement;
       if (!wrap || !wrap.contains(event.target)) openImport(false);
     }
+    if (!on("troubleshoot-panel").hidden) {
+      const wrap = on("troubleshoot").parentElement;
+      if (!wrap || !wrap.contains(event.target)) openTroubleshoot(false);
+    }
   });
 
   document.addEventListener("keydown", (event) => {
@@ -581,6 +622,11 @@ async function boot() {
     if (!on("import-panel").hidden) {
       openImport(false);
       on("import").focus();
+    }
+    if (!on("troubleshoot-panel").hidden) {
+      openTroubleshoot(false);
+      on("troubleshoot").focus();
+      return;
     }
   });
 

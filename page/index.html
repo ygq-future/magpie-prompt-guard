@@ -45,6 +45,21 @@
     <div class="grow"></div>
 
     <div class="picker-wrap">
+      <button id="troubleshoot" class="ghost" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="troubleshoot-panel">复制排查词</button>
+      <div id="troubleshoot-panel" class="popover import-panel" hidden>
+        <div class="import-head">
+          <label for="troubleshoot-text">429 二分排查提示词</label>
+          <span id="troubleshoot-status" class="muted" role="status"></span>
+        </div>
+        <textarea id="troubleshoot-text" readonly aria-label="429 二分排查提示词"></textarea>
+        <div class="import-foot">
+          <span class="muted">发给 Agent 协助二分定位触发短语</span>
+          <button id="troubleshoot-copy" class="primary" type="button">复制</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="picker-wrap">
       <button id="import" class="ghost" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="import-panel">导入词库</button>
       <div id="import-panel" class="popover import-panel" hidden>
         <div class="import-head">
