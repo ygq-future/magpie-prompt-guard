@@ -264,7 +264,7 @@ h1 { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: 0.01em; }
 
 .rule {
   display: grid;
-  grid-template-columns: auto minmax(0, 1.05fr) auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: auto auto minmax(0, 1.05fr) auto minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
@@ -276,6 +276,24 @@ h1 { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: 0.01em; }
 .rule:focus-within { border-color: var(--line-strong); background: var(--fill); }
 .rule[data-off="true"] .field { opacity: 0.55; }
 
+.badge {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  user-select: none;
+}
+.badge.custom {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.badge.imported {
+  opacity: 0.6;
+  background: var(--fill);
+}
 .arrow {
   opacity: 0.3;
   font-size: 12px;

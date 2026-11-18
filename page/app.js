@@ -71,12 +71,14 @@ function normalize(raw) {
   if (Array.isArray(raw.rules)) {
     for (const item of raw.rules) {
       if (!item || typeof item !== "object") continue;
-      out.rules.push({
+      const entry = {
         on: item.on !== false,
         find: typeof item.find === "string" ? item.find : "",
         replace: typeof item.replace === "string" ? item.replace : "",
         mode: item.mode === "regex" ? "regex" : "text",
-      });
+      };
+      if (item.custom === true) entry.custom = true;
+      out.rules.push(entry);
     }
   }
 
@@ -118,12 +120,11 @@ async function flush() {
   saving = true;
   lastSet = Date.now();
   try {
-    const saved = await api.options.set({
+    await api.options.set({
       off: state.off,
       models: state.models,
       rules: state.rules,
     });
-    if (saved) replaceState(normalize(saved));
     setStatus("已保存");
   } catch (error) {
     setStatus("保存失败", true);
@@ -241,6 +242,15 @@ function ruleRow(rule, index) {
     scheduleTest();
   });
 
+  const isCustom =
+    rule.custom === true ||
+    (typeof rule.find === "string" &&
+      rule.find.trim() !== "" &&
+      !BUILTIN_RULES.some((b) => b.find.trim().toLowerCase() === rule.find.trim().toLowerCase()));
+  const badge = document.createElement("span");
+  badge.className = `badge ${isCustom ? "custom" : "imported"}`;
+  badge.textContent = isCustom ? "自定义" : "词库";
+
   const find = document.createElement("input");
   find.type = "text";
   find.className = "field find";
@@ -312,7 +322,7 @@ function ruleRow(rule, index) {
   };
   validate();
 
-  row.append(power, find, arrow, replace, mode, remove);
+  row.append(power, badge, find, arrow, replace, mode, remove);
   return row;
 }
 
@@ -354,7 +364,7 @@ function renderRules() {
 }
 
 function addRule() {
-  state.rules.unshift({ on: true, find: "", replace: "", mode: "text" });
+  state.rules.unshift({ on: true, find: "", replace: "", mode: "text", custom: true });
   if (filter) {
     filter = "";
     inputEl("filter").value = "";
@@ -378,7 +388,7 @@ function addRule() {
 function applyPhrases(data) {
   const phrases = Array.isArray(data && data.phrases) ? data.phrases : null;
   if (!phrases) throw new Error("不是 phrases.json 的结构");
-  const rules = phrases
+  const imported = phrases
     .map((phrase) => ({
       on: true,
       find: typeof phrase.find === "string" ? phrase.find : "",
@@ -386,8 +396,19 @@ function applyPhrases(data) {
       mode: phrase.mode === "regex" ? "regex" : "text",
     }))
     .filter((rule) => rule.find && rule.replace);
-  if (!rules.length) throw new Error("词库里没有可用规则");
-  state.rules = rules;
+  if (!imported.length) throw new Error("词库里没有可用规则");
+
+  const builtinSet = new Set(BUILTIN_RULES.map((r) => r.find.trim().toLowerCase()));
+  const importedSet = new Set(imported.map((r) => r.find.trim().toLowerCase()));
+  const customRules = state.rules.filter((rule) => {
+    if (rule.custom === true) return true;
+    const key = typeof rule.find === "string" ? rule.find.trim().toLowerCase() : "";
+    return key !== "" && !builtinSet.has(key) && !importedSet.has(key);
+  });
+  const customSet = new Set(customRules.map((r) => r.find.trim().toLowerCase()));
+  const mergedImported = imported.filter((r) => !customSet.has(r.find.trim().toLowerCase()));
+
+  state.rules = [...customRules, ...mergedImported];
   if (filter) {
     filter = "";
     inputEl("filter").value = "";
@@ -395,7 +416,11 @@ function applyPhrases(data) {
   renderRules();
   scheduleSave();
   scheduleTest();
-  return { count: rules.length, updated: typeof data.updated === "string" ? data.updated : "" };
+  return {
+    count: mergedImported.length,
+    kept: customRules.length,
+    updated: typeof data.updated === "string" ? data.updated : "",
+  };
 }
 
 function setImportStatus(text, tone) {
@@ -419,7 +444,8 @@ function applyImport() {
   }
   try {
     const done = applyPhrases(JSON.parse(text));
-    setImportStatus(`已导入 ${done.count} 条${done.updated ? " · " + done.updated : ""}`);
+    const keptText = done.kept ? `（保留 ${done.kept} 条自定义）` : "";
+    setImportStatus(`已导入 ${done.count} 条${keptText}${done.updated ? " · " + done.updated : ""}`);
   } catch (error) {
     setImportStatus("导入失败：" + (error && error.message ? error.message : String(error)), "error");
   }
