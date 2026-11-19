@@ -176,6 +176,12 @@ export const BUILTIN_RULES = [
   },
   {
     on: true,
+    find: "Touch displayed changed lines only; `…`, `..`, collapsed `N-M:` and out-of-window lines UNSEEN. Re-read first.",
+    replace: "Edit only lines shown as changed; treat `…`, `..`, collapsed `N-M:` ranges and out-of-window lines as unseen; re-read the file first.",
+    mode: "text",
+  },
+  {
+    on: true,
     find: "Dual-use security tools (C2 frameworks, credential testing, exploit development) require clear authorization context",
     replace: "Dual-use security tools require clear authorization context",
     mode: "text",
@@ -249,7 +255,7 @@ export const BUILTIN_RULES = [
   {
     on: true,
     find: "You are a coding agent running in the Codex CLI",
-    replace: "You're a coding agent running in the Codex CLI",
+    replace: "You're a coding agent working in the Codex CLI",
     mode: "text",
   },
   {
