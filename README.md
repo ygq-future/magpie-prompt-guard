@@ -1,5 +1,11 @@
 # Prompt Guard
 
+[![GitHub stars](https://img.shields.io/github/stars/ygq-future/magpie-prompt-guard?style=flat-square)](https://github.com/ygq-future/magpie-prompt-guard/stargazers)
+[![版本](https://img.shields.io/github/package-json/v/ygq-future/magpie-prompt-guard?style=flat-square)](https://github.com/ygq-future/magpie-prompt-guard/releases)
+[![许可](https://img.shields.io/github/license/ygq-future/magpie-prompt-guard?style=flat-square)](LICENSE)
+[![magpie 插件](https://img.shields.io/badge/magpie-plugin-6e56cf?style=flat-square)](#安装插件)
+[![词库](https://img.shields.io/badge/%E8%AF%8D%E5%BA%93-phrases.json-2f855a?style=flat-square)](phrases.json)
+
 社区维护的 **Antigravity / Cloud Code 违禁词库**，以及把它自动应用到网关请求上的 **magpie 插件**。两者在同一个仓库里：词库是一份 JSON，插件从它生成规则。
 
 English: Google Cloud Code answers a system prompt that reads like a third-party agent with a quota-shaped 429. This repository keeps the fingerprints, the rewordings that pass, and a magpie plugin that applies them at the gateway.
